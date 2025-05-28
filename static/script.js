@@ -1,4 +1,6 @@
 // Initialize Bootstrap components and event listeners
+console.log("JavaScript carregado com sucesso!");
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
