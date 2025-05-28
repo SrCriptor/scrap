@@ -10,7 +10,8 @@ function getMediaLinks($url) {
 
     // Verifica se o conteúdo foi recuperado com sucesso
     if (!$content) {
-        return "Erro ao acessar a página.";
+        // Retorna array vazio para manter consistência no tipo de retorno
+        return [];
     }
 
     // Usando expressão regular para capturar links de arquivos de mídia (sem áudio)
@@ -27,28 +28,42 @@ function getMediaLinks($url) {
 
 // Função para exibir visualizações de imagens (se for imagem)
 function displayImagePreview($url) {
-    $image = getimagesize($url);
+    $image = @getimagesize($url); // @ para suprimir warning caso URL inválida
     return $image ? "<img src='$url' alt='Imagem' style='max-width: 200px; margin: 10px;'>" : '';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $url = $_POST['url'] ?? '';
+    $url = trim($_POST['url'] ?? '');
 
     if (empty($url)) {
         $errorMessage = "Por favor, insira um URL.";
+        $mediaLinks = [];
+    } elseif (!filter_var($url, FILTER_VALIDATE_URL)) {
+        $errorMessage = "URL inválida. Por favor, informe uma URL correta.";
+        $mediaLinks = [];
     } else {
         // Pegando os links de mídia do site
         $mediaLinks = getMediaLinks($url);
+
+        // Se por algum motivo não for array, define array vazio para evitar erros
+        if (!is_array($mediaLinks)) {
+            $errorMessage = "Erro ao buscar os links de mídia.";
+            $mediaLinks = [];
+        }
+
+        // Se não encontrar nenhum link, pode avisar também
+        if (empty($mediaLinks)) {
+            $infoMessage = "Nenhum arquivo de mídia encontrado.";
+        }
     }
 }
-
 ?>
 
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Scraper de Mídia</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
@@ -56,6 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         form { margin-bottom: 20px; }
         .media-item { margin-bottom: 15px; }
         .video { margin-top: 10px; }
+        .error { color: red; }
+        .info { color: blue; }
     </style>
 </head>
 <body>
@@ -68,35 +85,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 
     <?php if (!empty($errorMessage)): ?>
-        <p style="color: red;"><?= $errorMessage ?></p>
+        <p class="error"><?= htmlspecialchars($errorMessage) ?></p>
+    <?php elseif (!empty($infoMessage)): ?>
+        <p class="info"><?= htmlspecialchars($infoMessage) ?></p>
     <?php endif; ?>
 
-    <?php if (isset($mediaLinks)): ?>
-        <?php if (empty($mediaLinks)): ?>
-            <p>Nenhum arquivo de mídia encontrado.</p>
-        <?php else: ?>
-            <h2>Links Encontrados:</h2>
-            <ul>
-                <?php foreach ($mediaLinks as $link): ?>
-                    <li class="media-item">
-                        <strong>Link:</strong> <a href="<?= $link ?>" target="_blank"><?= $link ?></a><br>
-                        <?php if (preg_match('/\.(png|jpg|jpeg|gif|webp|bmp)$/i', $link)): ?>
-                            <div class="image-preview">
-                                <?= displayImagePreview($link) ?>
-                            </div>
-                        <?php elseif (preg_match('/\.(mp4|webm|ogg|flv|avi)$/i', $link)): ?>
-                            <div class="video">
-                                <strong>Vídeo:</strong><br>
-                                <video width="320" height="240" controls>
-                                    <source src="<?= $link ?>" type="video/<?= pathinfo($link, PATHINFO_EXTENSION) ?>">
-                                    Seu navegador não suporta a tag de vídeo.
-                                </video>
-                            </div>
-                        <?php endif; ?>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        <?php endif; ?>
+    <?php if (!empty($mediaLinks)): ?>
+        <h2>Links Encontrados:</h2>
+        <ul>
+            <?php foreach ($mediaLinks as $link): ?>
+                <li class="media-item">
+                    <strong>Link:</strong> <a href="<?= htmlspecialchars($link) ?>" target="_blank"><?= htmlspecialchars($link) ?></a><br>
+                    <?php if (preg_match('/\.(png|jpg|jpeg|gif|webp|bmp)$/i', $link)): ?>
+                        <div class="image-preview">
+                            <?= displayImagePreview($link) ?>
+                        </div>
+                    <?php elseif (preg_match('/\.(mp4|webm|ogg|flv|avi)$/i', $link)): ?>
+                        <div class="video">
+                            <strong>Vídeo:</strong><br>
+                            <video width="320" height="240" controls>
+                                <source src="<?= htmlspecialchars($link) ?>" type="video/<?= pathinfo($link, PATHINFO_EXTENSION) ?>">
+                                Seu navegador não suporta a tag de vídeo.
+                            </video>
+                        </div>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ul>
     <?php endif; ?>
 
 </body>
