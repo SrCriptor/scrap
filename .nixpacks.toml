@@ -1,0 +1,15 @@
+[phases.setup]
+packages = ["python3", "python3Packages.pip", "python3Packages.setuptools"]
+
+[phases.install]
+commands = [
+  "pip3 install -r requirements.txt"
+]
+
+[phases.build]
+commands = []
+
+[phases.start]
+commands = [
+  "gunicorn app:app -b 0.0.0.0:$PORT"
+]
